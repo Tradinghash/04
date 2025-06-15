@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heikin-Ashi BTC/USDT Trader</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --dark: #0f172a;
+            --darker: #020617;
+            --buy: #047857;
+            --sell: #b91c1c;
+            --hold: #ca8a04;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo i {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+        
+        .logo h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+        
+        .price-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .price {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .price-change {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        
+        .signal-buy {
+            background: linear-gradient(135deg, var(--buy), #065f46);
+        }
+        
+        .signal-sell {
+            background: linear-gradient(135deg, var(--sell), #7f1d1d);
+        }
+        
+        .signal-hold {
+            background: linear-gradient(135deg, var(--hold), #854d0e);
+        }
+        
+        .signal-card {
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .signal-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .signal-text h3 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .signal-text p {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .signal-icon {
+            font-size: 3rem;
+        }
+        
+        .signal-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+            margin-top: 20px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            text-align: left;
+            padding: 15px;
+            color: #94a3b8;
+            font-weight: 600;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .candle-bullish {
+            background-color: var(--secondary);
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .candle-bearish {
+            background-color: var(--sell);
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .signal-tag-buy, .signal-tag-sell, .signal-tag-hold {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .signal-tag-buy {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+        }
+        
+        .signal-tag-sell {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--sell);
+        }
+        
+        .signal-tag-hold {
+            background: rgba(202, 138, 4, 0.2);
+            color: var(--hold);
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 50px;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(59, 130, 246, 0.3);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            border-top: 1px solid #334155;
+            margin-top: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .refresh-btn {
+            background: #1e293b;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: var(--primary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(90deg);
+        }
+        
+        .timeframe-selector {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <h1>Heikin-Ashi BTC/USDT Trader</h1>
+            </div>
+            <div class="price-display">
+                <div class="price" id="current-price">$61,428.75</div>
+                <div class="price-change" id="price-change">
+                    <i class="fas fa-caret-up"></i>
+                    <span>2.3%</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Trading Signal</h2>
+                    <div class="controls">
+                        <div class="timeframe-selector">
+                            4h Timeframe
+                        </div>
+                        <button class="refresh-btn" id="refresh-btn">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="signal-card signal-buy">
+                    <div class="signal-content">
+                        <div class="signal-text">
+                            <h3><i class="fas fa-arrow-trend-up"></i> BUY SIGNAL</h3>
+                            <p>Strong bullish trend detected with high confidence</p>
+                        </div>
+                        <div class="signal-icon">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="signal-stats">
+                    <div class="stat-box">
+                        <div class="stat-label">Strength</div>
+                        <div class="stat-value">STRONG</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Confidence</div>
+                        <div class="stat-value">85%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Trend</div>
+                        <div class="stat-value">BULLISH</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last Update</div>
+                        <div class="stat-value" id="update-time">12:45:32 PM</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">BTC/USDT Price Chart</h2>
+                    <div class="controls">
+                        <div class="timeframe-selector">
+                            4h Candles
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Heikin-Ashi Chart</h2>
+                    <div class="controls">
+                        <div class="timeframe-selector">
+                            4h Candles
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ha-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Candles</h2>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>HA Open</th>
+                                <th>HA Close</th>
+                                <th>Candle</th>
+                                <th>Signal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Jun 16, 08:00</td>
+                                <td>$61,210.32</td>
+                                <td>$61,428.75</td>
+                                <td><div class="candle-bullish"></div></td>
+                                <td><span class="signal-tag-buy">BUY</span></td>
+                            </tr>
+                            <tr>
+                                <td>Jun 16, 04:00</td>
+                                <td>$61,025.67</td>
+                                <td>$61,210.32</td>
+                                <td><div class="candle-bullish"></div></td>
+                                <td><span class="signal-tag-buy">BUY</span></td>
+                            </tr>
+                            <tr>
+                                <td>Jun 16, 00:00</td>
+                                <td>$60,845.89</td>
+                                <td>$61,025.67</td>
+                                <td><div class="candle-bullish"></div></td>
+                                <td><span class="signal-tag-hold">HOLD</span></td>
+                            </tr>
+                            <tr>
+                                <td>Jun 15, 20:00</td>
+                                <td>$60,920.45</td>
+                                <td>$60,845.89</td>
+                                <td><div class="candle-bearish"></div></td>
+                                <td><span class="signal-tag-hold">HOLD</span></td>
+                            </tr>
+                            <tr>
+                                <td>Jun 15, 16:00</td>
+                                <td>$61,150.22</td>
+                                <td>$60,920.45</td>
+                                <td><div class="candle-bearish"></div></td>
+                                <td><span class="signal-tag-sell">SELL</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>This application provides cryptocurrency trading signals for educational purposes only</p>
+            <p>Always do your own research before making any trading decisions</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts with sample data
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sample price data
+            const priceData = [61000, 61250, 61500, 61700, 61800, 61950, 62000, 62150, 62300, 62450, 62500, 62400, 62350, 62200, 62100, 62050, 61900, 61850, 61700, 61650];
+            
+            // Sample Heikin-Ashi data
+            const haData = [60950, 61080, 61220, 61360, 61510, 61670, 61830, 61990, 62160, 62330, 62490, 62550, 62510, 62420, 62300, 62170, 62040, 61910, 61780, 61650];
+            
+            // Labels for the charts
+            const labels = [];
+            const now = new Date();
+            for (let i = 19; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
+                labels.push(time.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}));
+            }
+            
+            // Price Chart
+            const priceCtx = document.getElementById('price-chart').getContext('2d');
+            const priceChart = new Chart(priceCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'BTC/USDT Price',
+                        data: priceData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 0,
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Heikin-Ashi Chart
+            const haCtx = document.getElementById('ha-chart').getContext('2d');
+            const haChart = new Chart(haCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Heikin-Ashi Close',
+                        data: haData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                maxRotation: 0,
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Update time every second
+            function updateTime() {
+                const now = new Date();
+                document.getElementById('update-time').textContent = 
+                    now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+            }
+            
+            setInterval(updateTime, 1000);
+            
+            // Refresh button functionality
+            document.getElementById('refresh-btn').addEventListener('click', function() {
+                this.classList.add('animate-spin');
+                setTimeout(() => {
+                    this.classList.remove('animate-spin');
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
